@@ -1,10 +1,9 @@
-import os
 import openai
 import gradio as gr
 
 # API Key
 
-openai.api_key = os.environ.get["API_TOKEN"]
+openai.api_key = "API_KEY"
 
 # OpenAI Chat Bot
 
