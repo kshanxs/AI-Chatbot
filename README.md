@@ -1,6 +1,6 @@
 # 🤖 AI-Chatbot
 
-This repository contains a simple AI chatbot built using OpenRouter's GPT-3.5-turbo model and Gradio for the web interface.
+This repository contains a simple AI chatbot built using OpenRouter's API and Gradio for the web interface.
 
 ## ✨ Features
 
