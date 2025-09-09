@@ -89,4 +89,3 @@ demo = gr.Interface(
 # Launch the Gradio interface
 if __name__ == "__main__":
     demo.launch(debug=True, share=True)
-
