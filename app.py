@@ -1,58 +1,92 @@
-import openai
+import requests
 import gradio as gr
 
-# Set the API key for OpenAI
-openai.api_key = "API_KEY"
+# Set the API key for OpenRouter
+OPENROUTER_API_KEY = "YOUR_OPENROUTER_API_KEY"  # Replace with your OpenRouter API key
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
-# Function to interact with OpenAI's GPT-3 model
-def openai_chat(prompt):
-    # Create a completion using the specified engine and parameters
-    completions = openai.Completion.create(
-        engine="text-davinci-003",  # The model to use
-        prompt=prompt,              # The input prompt
-        max_tokens=1024,            # Maximum number of tokens to generate
-        n=1,                        # Number of completions to generate
-        temperature=0.5,            # Sampling temperature
-    )
+# Function to interact with OpenRouter's API
+def openrouter_chat(prompt):
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://localhost:7860",
+        "X-Title": "AI Byte Chatbot"
+    }
 
-    # Extract the message from the completion response
-    message = completions.choices[0].text
-    return message.strip()
+    data = {
+        "model": "openai/gpt-3.5-turbo",
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "max_tokens": 1024,
+        "temperature": 0.7
+    }
 
-# Function to handle the chatbot interaction
-def chatbot(input, history=[]):
-    # Get the response from the OpenAI model
-    output = openai_chat(input)
-    # Append the input and output to the history
-    history.append((input, output))
-    return history, history
+    try:
+        response = requests.post(
+            f"{OPENROUTER_BASE_URL}/chat/completions",
+            headers=headers,
+            json=data,
+            timeout=30
+        )
 
-# List of example prompts to try with the chatbot
-try_examples = [
-    "Poem on nature",
-    "Quote on friends",
-    "Explain black hole",
-    "Python program palindrome",
-    "Essay on India",
-    "Suggest me best anime to watch",
-    "quick sort algo c++",
-    "Theory of relativity?",
-]
+        # Check if response is successful
+        if response.status_code != 200:
+            return f"Error: API returned status {response.status_code}. Response: {response.text[:500]}"
 
-# Create a Gradio interface for the chatbot
-text_in_out = gr.Interface(
-    title="AI Byte",                # Title of the interface
-    examples=try_examples,          # Example prompts to display
-    description="Let's type something for me😊",  # Description of the interface
-    fn=chatbot,                     # Function to call for generating responses
-    inputs=["text", 'state'],       # Input types: text and state
-    outputs=["chatbot", 'state'],   # Output types: chatbot and state
-    allow_flagging="never",         # Disable flagging of responses
+        result = response.json()
+
+        # Check if response has expected structure
+        if 'choices' not in result or not result['choices']:
+            return f"Error: No choices in response. Full response: {result}"
+
+        message = result['choices'][0]['message']['content']
+        return message.strip()
+
+    except requests.exceptions.Timeout:
+        return "Error: Request timed out. Please try again."
+    except requests.exceptions.ConnectionError:
+        return "Error: Could not connect to OpenRouter API. Please check your internet connection."
+    except requests.exceptions.RequestException as e:
+        return f"Error: Request failed. {str(e)}"
+    except Exception as e:
+        return f"Error: Unexpected error occurred. {str(e)}"
+
+# Simple chatbot function for Gradio 3.x
+def chat_function(message):
+    if message.strip() == "":
+        return "Please enter a message."
+
+    response = openrouter_chat(message)
+    return response
+
+# Create a simple Gradio interface compatible with version 3.x
+demo = gr.Interface(
+    fn=chat_function,
+    inputs=gr.Textbox(label="Your Message", placeholder="Type your message here..."),
+    outputs=gr.Textbox(label="AI Response"),
+    title="AI Byte",
+    description="Let's type something for me😊",
+    examples=[
+        "Poem on nature",
+        "Quote on life",
+        "Explain black hole",
+        "Python program palindrome",
+        "India's history",
+        "What is AI?",
+        "What is machine learning?",
+        "Suggest me best anime to watch",
+        "quick sort algo c++",
+        "Theory of relativity?"
+    ],
+    allow_flagging="never"
 )
-
-# Create a tabbed interface with the Gradio interface
-frame = gr.TabbedInterface([text_in_out], ["Hello"])
 
 # Launch the Gradio interface
 if __name__ == "__main__":
-    frame.launch(debug=True, share=True)
+    demo.launch(debug=True, share=True)
+
